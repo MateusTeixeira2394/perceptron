@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <title>Perceptron</title>
+    <meta charset="utf-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/css/materialize.min.css">
+
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
+
+    <!-- <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"> -->
+    <link href="trabalhostylesheet.css" rel="stylesheet">
+
+    <script src="morris.min.js"></script>
+    <link rel="stylesheet" href="morris.css">
+  </head>
+  <body>
+    <header>
+      <nav>
+      <div class="nav-wrapper">
+
+
+
+      </div>
+    </nav>
+</header>
+  <main>
+    <div class="container">
+
+    <h4>Importar CSV para Treino</h4>
+    <h5 style="color:grey">Copiar e colar o CSV na caixa de texto abaixo. Observação: Não quebrar a linha do CSV. É para deixar o cursor piscando na última linha do texto. Isso serve para a caixa de texto para importar o CSV de Teste.</h5>
+
+    <textarea id='csv_treino' style="margin-top:30px;height:300px"></textarea>
+
+    <button class="btn" id="importar" style="margin:10px;">Importar</button>
+
+    <button class="btn" id="treinar" style="margin:10px;" disabled="true">Treinar</button>
+
+    <h4>Interações:</h4><h4 id='interacao'>0</h4>
+
+    <table style="margin-top:30px;margin-bottom:30px;">
+      <tbody id="tbody_dados">
+        <tr id="row_dados" style="background-color:#26a69a;color:white;"></tr>
+
+      </tbody>
+    </table>
+
+    <h4>Importar CSV para Teste</h4>
+
+    <textarea id='csv_teste' style="margin-top:30px;height:300px" ></textarea>
+
+    <button class="btn" id="importar_teste" style="margin:10px;" disabled="true">Importar</button>
+
+    <button class="btn" id="testar" style="margin:10px;" disabled="true">Testar</button>
+
+    <table style="margin-top:30px;margin-bottom:30px;">
+      <tbody id="tbody_dados_teste">
+        <tr id="row_dados_teste" style="background-color:#26a69a;color:white;"></tr>
+
+      </tbody>
+    </table>
+
+  </div>
+  </main>
+    <footer class="page-footer">
+          <div class="container">
+            <div class="row">
+              <div class="col l6 s12">
+                <h5 class="white-text">Perceptron</h5>
+              </div>
+              <div class="col l4 offset-l2 s12">
+
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="footer-copyright">
+            <div class="container">
+            © 2017 Mateus Albuquerque Teixeira
+            </div>
+          </div>
+        </footer>
+<script>
+
+  var iteracao = 0;
+
+  function funcaoy(u){
+    if (u>=0) {
+      return 1;
+    }else {
+      return 0;
+    }
+  }
+
+  function gerarLinhaTabela(tabela) {
+    $('#row_dados').append('<td id="i'+i+'">Itercao</td>');
+    for (var i = 0; i < tabela[0].length; i++) {
+      $('#row_dados').append('<td id="w'+i+'">W'+i+'</td>');
+    }
+    for (var i = 1; i < tabela[0].length; i++) {
+      $('#row_dados').append('<td id="x'+i+'">X'+i+'</td>');
+    }
+    $('#row_dados').append('<td id="d">D</td>');
+    $('#row_dados').append('<td id="y">Y</td>');
+  }
+
+  function gerarLinhaTabelaTeste(tabela) {
+
+    for (var i = 1; i <= tabela[0].length; i++) {
+      $('#row_dados_teste').append('<td id="xteste'+i+'">X'+i+'</td>');
+    }
+    $('#row_dados_teste').append('<td id="yteste">Y</td>');
+  }
+
+  function atualizarDados(pesos,vetor,y){
+    $('#tbody_dados').append('<tr id="tr_dados'+iteracao+'"></tr>');
+      $('#tr_dados'+iteracao).append('<td>'+iteracao+'</td>');
+    for (var i = 0; i < pesos.length; i++) {
+      $('#tr_dados'+iteracao).append('<td>'+pesos[i]+'</td>');
+    }
+    for (var i = 0; i < vetor.length; i++) {
+      $('#tr_dados'+iteracao).append('<td>'+vetor[i]+'</td>');
+    }
+    $('#tr_dados'+iteracao).append('<td>'+y+'</td>');
+    $('#interacao').text(iteracao);
+  }
+
+  function atualizarDadosTeste(vetor,y){
+    $('#tbody_dados_teste').append('<tr id="tr_dados_teste'+iteracao+'"></tr>');
+    for (var i = 0; i < vetor.length; i++) {
+      $('#tr_dados_teste'+iteracao).append('<td>'+vetor[i]+'</td>');
+    }
+    $('#tr_dados_teste'+iteracao).append('<td>'+y+'</td>');
+  }
+
+  function gerarPesos(qtd_pesos){
+    var pesos = [];
+    for (var i = 0; i < qtd_pesos; i++) {
+      pesos[i] = Math.random().toFixed(1);
+    }
+    // console.log("Pesos criados:");
+    // console.log(pesos);
+    return pesos;
+  }
+
+  function treinar(tabela,pesos,n){
+
+    var despreparado = true;
+
+    //só será treinado quando não houver mais erros
+    while (despreparado) {
+
+      var erro = tabela.length;
+
+      //para percorrer toda tabela
+      for (var i = 0; i < tabela.length; i++) {
+
+          iteracao++;
+          // console.log("Iteracao: "+iteracao);
+
+          var vetor = tabela[i];
+
+          var d = vetor[vetor.length-1]
+
+          // u é o somatório. Nesse caso u ja recebe w0*-1.
+          var u = pesos[0]*-1;
+
+          for (var z = 0; z < vetor.length-1; z++) {
+            u = u + vetor[z]*pesos[z+1]
+          }
+
+          var y = funcaoy(u);
+
+          // console.log("Vetores");
+          // console.log(vetor);
+          // console.log("Resposta");
+          // console.log(y);
+
+          // ajustar os pesos
+          //ajusta o peso w0
+          pesos[0] = parseFloat(pesos[0]) + n*(d-y)*-1
+
+          for (var k = 1; k < pesos.length; k++) {
+            pesos[k] = parseFloat(pesos[k]) + n*(d-y)*vetor[k-1]
+          }
+
+          // console.log("Pesos treinados");
+          // console.log(pesos);
+          atualizarDados(pesos,vetor,y)
+
+          if (y==d) {
+            erro--;
+          }
+      }
+
+      if (erro == 0) {
+        despreparado=false;
+      }else {
+        despreparado=true;
+      }
+
+    }
+
+    return pesos;
+  }
+
+  function testar(pesos,tabela){
+    for (var i = 0; i < tabela.length; i++) {
+      iteracao++;
+      var vetor = tabela[i];
+
+      // u é o somatório. Nesse caso u ja recebe w0*-1.
+      var u = pesos[0]*-1;
+
+      for (var z = 0; z < vetor.length; z++) {
+        u = u + vetor[z]*pesos[z+1]
+      }
+
+      var y = funcaoy(u);
+
+      atualizarDadosTeste(vetor,y);
+    }
+  }
+
+  //var csv is the CSV file with headers
+function importar_csv(csv){
+
+  var lines=csv.split("\n");
+
+  var result = []
+
+  for (var i = 0; i < lines.length; i++) {
+    result[i] = lines[i].split(",");
+  }
+
+  console.log(result);
+  return result;
+  }
+
+
+  $(document).ready(function(){
+
+    var tabela = [];
+    var tabela_teste = [];
+    var pesos = []
+
+    $('#importar').click(function(){
+      tabela = importar_csv($('#csv_treino').val());
+
+      pesos = gerarPesos(tabela[0].length);
+
+      gerarLinhaTabela(tabela);
+
+      atualizarDados(pesos,[]);
+
+      alert("CSV importado");
+
+      $('#treinar').prop("disabled",false);
+
+    });
+
+    $('#treinar').click(function(){
+      pesos = treinar(tabela,pesos,0.5);
+      $('#importar_teste').prop("disabled",false);
+    });
+
+    var tabela_teste_gerado = false
+
+    $('#importar_teste').click(function(){
+      tabela_teste = importar_csv($('#csv_teste').val());
+
+      alert("CSV importado");
+
+      $('#testar').prop("disabled",false);
+
+      if (!tabela_teste_gerado) {
+        gerarLinhaTabelaTeste(tabela_teste);
+      }
+
+      tabela_teste_gerado = true;
+
+    });
+
+    $('#testar').click(function(){
+      testar(pesos,tabela_teste);
+    });
+
+  });
+
+
+</script>
+
+  </body>
+</html>
